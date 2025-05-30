@@ -13,8 +13,16 @@ To try the simulator run:
 python run_simulation.py
 ```
 
+This prints an ASCII representation of the town at each step. A simple
+animated GUI version using `tkinter` is also available:
+
+```bash
+python run_simulation_gui.py
+```
+
 This will create a small 5x5 town grid, add two vehicles, and step them
-through the town while printing their positions.
+through the town while printing their positions. The GUI version shows the
+same simulation but animates the vehicles in a small window.
 
 ## Using the library
 
