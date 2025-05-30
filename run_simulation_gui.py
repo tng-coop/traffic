@@ -1,8 +1,9 @@
 """GUI visualizer for the traffic simulator using tkinter.
 
-This version creates a 10x10 grid to represent a small town and spawns
-20 vehicles with random start and end points. Each vehicle is represented
-as a colored rectangle moving along its planned path.
+This version creates a 10x10 town and spawns 20 vehicles with random
+start and end points. Roads are drawn as gray lines connecting
+intersections and each vehicle is represented as a colored circle moving
+along its planned path.
 """
 
 import tkinter as tk
@@ -12,6 +13,8 @@ from typing import List
 from town import Town, TrafficSimulator, Vehicle
 
 CELL_SIZE = 40
+ROAD_WIDTH = 8
+VEHICLE_RADIUS = 6
 VEHICLE_COLORS = [
     "red",
     "blue",
@@ -46,18 +49,21 @@ class VisualTrafficSimulator(TrafficSimulator):
 
     def add_vehicle(self, vehicle: Vehicle) -> None:
         super().add_vehicle(vehicle)
-        # Create a rectangle to represent this vehicle
+        # Create a circle to represent this vehicle at the intersection center
         color = VEHICLE_COLORS[len(self.vehicle_items) % len(VEHICLE_COLORS)]
         if vehicle.path:
             x, y = vehicle.path[0]
         else:
             x, y = vehicle.start
-        item = self.canvas.create_rectangle(
-            x * CELL_SIZE + 5,
-            y * CELL_SIZE + 5,
-            (x + 1) * CELL_SIZE - 5,
-            (y + 1) * CELL_SIZE - 5,
+        cx = x * CELL_SIZE + CELL_SIZE / 2
+        cy = y * CELL_SIZE + CELL_SIZE / 2
+        item = self.canvas.create_oval(
+            cx - VEHICLE_RADIUS,
+            cy - VEHICLE_RADIUS,
+            cx + VEHICLE_RADIUS,
+            cy + VEHICLE_RADIUS,
             fill=color,
+            outline=""
         )
         self.vehicle_items.append(item)
 
@@ -65,25 +71,38 @@ class VisualTrafficSimulator(TrafficSimulator):
         super().step()
         for vehicle, item in zip(self.vehicles, self.vehicle_items):
             x, y = vehicle.path[vehicle.position_index]
+            cx = x * CELL_SIZE + CELL_SIZE / 2
+            cy = y * CELL_SIZE + CELL_SIZE / 2
             self.canvas.coords(
                 item,
-                x * CELL_SIZE + 5,
-                y * CELL_SIZE + 5,
-                (x + 1) * CELL_SIZE - 5,
-                (y + 1) * CELL_SIZE - 5,
+                cx - VEHICLE_RADIUS,
+                cy - VEHICLE_RADIUS,
+                cx + VEHICLE_RADIUS,
+                cy + VEHICLE_RADIUS,
             )
 
 
-def draw_grid(canvas: tk.Canvas, town: Town) -> None:
-    for x in range(town.width):
-        for y in range(town.height):
-            canvas.create_rectangle(
-                x * CELL_SIZE,
-                y * CELL_SIZE,
-                (x + 1) * CELL_SIZE,
-                (y + 1) * CELL_SIZE,
-                outline="black",
-            )
+def draw_roads(canvas: tk.Canvas, town: Town) -> None:
+    """Draw road lines between intersections."""
+
+    def center(pt: tuple[int, int]) -> tuple[float, float]:
+        x, y = pt
+        return x * CELL_SIZE + CELL_SIZE / 2, y * CELL_SIZE + CELL_SIZE / 2
+
+    # draw road lines
+    for (x, y), node in town.nodes.items():
+        cx, cy = center((x, y))
+        for nx, ny in node.neighbors:
+            if nx < x or ny < y:
+                continue  # avoid drawing the same road twice
+            ncx, ncy = center((nx, ny))
+            canvas.create_line(cx, cy, ncx, ncy, fill="gray", width=ROAD_WIDTH)
+
+    # draw intersections on top
+    for (x, y) in town.nodes:
+        cx, cy = center((x, y))
+        r = ROAD_WIDTH / 2
+        canvas.create_oval(cx - r, cy - r, cx + r, cy + r, fill="black")
 
 
 def main() -> None:
@@ -103,7 +122,7 @@ def main() -> None:
     canvas = tk.Canvas(root, width=town.width * CELL_SIZE, height=town.height * CELL_SIZE)
     canvas.pack()
 
-    draw_grid(canvas, town)
+    draw_roads(canvas, town)
 
     simulator = VisualTrafficSimulator(town, canvas)
     # Add 20 vehicles with random start and goal positions
