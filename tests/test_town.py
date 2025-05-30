@@ -21,6 +21,8 @@ def test_vehicle_waits_at_red_signal():
     sim.step()
     # vehicle should not move while signal is red
     assert v.position_index == 0
+    sim.step()  # still red on second step
+    assert v.position_index == 0
     sim.step()  # signal turns green
     assert v.position_index == 1
 

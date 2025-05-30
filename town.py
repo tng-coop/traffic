@@ -28,12 +28,14 @@ class Node:
 class Town:
     """Grid-based town with roads connecting intersections."""
 
-    def __init__(self, width: int, height: int) -> None:
+    def __init__(self, width: int, height: int, signal_duration: int = 2) -> None:
         self.width = width
         self.height = height
         self.nodes: Dict[Tuple[int, int], Node] = {}
         self._create_grid()
-        self.signal_step = 0
+        self.signal_duration = signal_duration
+        # Start at 1 so the first call to update_signals sets all lights to red
+        self.signal_step = 1
 
     def _create_grid(self) -> None:
         for x in range(self.width):
@@ -56,10 +58,13 @@ class Town:
             self.nodes[b].neighbors[a] = weight
 
     def update_signals(self) -> None:
-        """Toggle all traffic signals between red and green each step."""
+        """Update traffic signals using a fixed cycle of green and red phases."""
         self.signal_step += 1
+        cycle_length = self.signal_duration * 2
+        phase = self.signal_step % cycle_length
+        color = "green" if phase < self.signal_duration else "red"
         for node in self.nodes.values():
-            node.signal = "green" if self.signal_step % 2 == 0 else "red"
+            node.signal = color
 
     def heuristic(self, a: Tuple[int, int], b: Tuple[int, int]) -> float:
         """Manhattan distance heuristic used for A* search."""

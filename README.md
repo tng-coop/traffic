@@ -24,9 +24,10 @@ python run_simulation_gui.py
 
 This will open a window showing a 10x10 town. Roads are displayed using
 gray rectangles with dashed lane markings and each intersection has a
-traffic signal that toggles between red and green. Twenty vehicles are
-created with random start and goal positions and move along their planned
-routes in real time, waiting at red lights.
+traffic signal that follows a simple cycle: two simulation steps of red
+followed by two steps of green. Twenty vehicles are created with random
+start and goal positions and move along their planned routes in real time,
+waiting at red lights.
 
 ## Using the library
 
