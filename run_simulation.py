@@ -1,6 +1,22 @@
 """Example usage of the A*-based traffic simulator."""
 
+from typing import List
+
 from town import Town, TrafficSimulator, Vehicle
+
+
+def render_town(town: Town, vehicles: List[Vehicle]) -> None:
+    """Render an ASCII representation of the town with vehicles."""
+    grid = [["." for _ in range(town.width)] for _ in range(town.height)]
+    for idx, vehicle in enumerate(vehicles, start=1):
+        if vehicle.path:
+            x, y = vehicle.path[vehicle.position_index]
+            # Show vehicle index at its current position
+            grid[y][x] = str(idx)
+
+    for row in grid:
+        print(" ".join(row))
+    print()
 
 
 def main() -> None:
@@ -22,6 +38,7 @@ def main() -> None:
     step = 0
     while not simulator.is_complete():
         print(f"Step {step}:")
+        render_town(town, simulator.vehicles)
         for v in simulator.vehicles:
             print(f"  Vehicle from {v.start} to {v.goal} at {v.path[v.position_index]}")
         simulator.step()
