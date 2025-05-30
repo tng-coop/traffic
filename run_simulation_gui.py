@@ -1,12 +1,39 @@
-"""GUI visualizer for the traffic simulator using tkinter."""
+"""GUI visualizer for the traffic simulator using tkinter.
+
+This version creates a 10x10 grid to represent a small town and spawns
+20 vehicles with random start and end points. Each vehicle is represented
+as a colored rectangle moving along its planned path.
+"""
 
 import tkinter as tk
+import random
 from typing import List
 
 from town import Town, TrafficSimulator, Vehicle
 
 CELL_SIZE = 40
-VEHICLE_COLORS = ["red", "blue", "green", "purple", "orange"]
+VEHICLE_COLORS = [
+    "red",
+    "blue",
+    "green",
+    "purple",
+    "orange",
+    "cyan",
+    "magenta",
+    "yellow",
+    "pink",
+    "gray",
+    "brown",
+    "lime",
+    "navy",
+    "teal",
+    "maroon",
+    "olive",
+    "salmon",
+    "gold",
+    "indigo",
+    "turquoise",
+]
 
 
 class VisualTrafficSimulator(TrafficSimulator):
@@ -60,9 +87,16 @@ def draw_grid(canvas: tk.Canvas, town: Town) -> None:
 
 
 def main() -> None:
-    town = Town(width=5, height=5)
-    town.set_road_weight((1, 2), (2, 2), 5.0)
-    town.set_road_weight((2, 2), (2, 3), 3.0)
+    # Create a larger grid to resemble a small town
+    town = Town(width=10, height=10)
+
+    # Randomly adjust a few road weights to simulate traffic
+    for _ in range(15):
+        a = (random.randint(0, town.width - 1), random.randint(0, town.height - 1))
+        neighbors = list(town.nodes[a].neighbors.keys())
+        if neighbors:
+            b = random.choice(neighbors)
+            town.set_road_weight(a, b, random.uniform(2.0, 6.0))
 
     root = tk.Tk()
     root.title("Traffic Simulator")
@@ -72,17 +106,31 @@ def main() -> None:
     draw_grid(canvas, town)
 
     simulator = VisualTrafficSimulator(town, canvas)
-    simulator.add_vehicle(Vehicle(start=(0, 0), goal=(4, 4)))
-    simulator.add_vehicle(Vehicle(start=(4, 0), goal=(0, 4)))
+    # Add 20 vehicles with random start and goal positions
+    for _ in range(20):
+        start = (
+            random.randint(0, town.width - 1),
+            random.randint(0, town.height - 1),
+        )
+        goal = (
+            random.randint(0, town.width - 1),
+            random.randint(0, town.height - 1),
+        )
+        while goal == start:
+            goal = (
+                random.randint(0, town.width - 1),
+                random.randint(0, town.height - 1),
+            )
+        simulator.add_vehicle(Vehicle(start=start, goal=goal))
 
     def loop() -> None:
         if not simulator.is_complete():
             simulator.step()
-            root.after(500, loop)
+            root.after(300, loop)
         else:
             print("Simulation complete.")
 
-    root.after(500, loop)
+    root.after(300, loop)
     root.mainloop()
 
 

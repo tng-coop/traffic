@@ -20,9 +20,9 @@ animated GUI version using `tkinter` is also available:
 python run_simulation_gui.py
 ```
 
-This will create a small 5x5 town grid, add two vehicles, and step them
-through the town while printing their positions. The GUI version shows the
-same simulation but animates the vehicles in a small window.
+This will open a window showing a 10x10 grid that represents the town.
+Twenty vehicles are created with random start and goal positions and move
+simultaneously through the grid.
 
 ## Using the library
 
