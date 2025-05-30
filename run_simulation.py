@@ -6,8 +6,8 @@ from town import Town, TrafficSimulator, Vehicle
 
 
 def render_town(town: Town, vehicles: List[Vehicle]) -> None:
-    """Render an ASCII representation of the town with vehicles."""
-    grid = [["." for _ in range(town.width)] for _ in range(town.height)]
+    """Render an ASCII representation of the town with vehicles and signals."""
+    grid = [["G" if town.nodes[(x, y)].signal == "green" else "R" for x in range(town.width)] for y in range(town.height)]
     for idx, vehicle in enumerate(vehicles, start=1):
         if vehicle.path:
             x, y = vehicle.path[vehicle.position_index]

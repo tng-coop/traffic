@@ -22,6 +22,7 @@ class Node:
     x: int
     y: int
     neighbors: Dict[Tuple[int, int], float] = field(default_factory=dict)
+    signal: str = "green"
 
 
 class Town:
@@ -32,6 +33,7 @@ class Town:
         self.height = height
         self.nodes: Dict[Tuple[int, int], Node] = {}
         self._create_grid()
+        self.signal_step = 0
 
     def _create_grid(self) -> None:
         for x in range(self.width):
@@ -52,6 +54,12 @@ class Town:
         if b in self.nodes[a].neighbors:
             self.nodes[a].neighbors[b] = weight
             self.nodes[b].neighbors[a] = weight
+
+    def update_signals(self) -> None:
+        """Toggle all traffic signals between red and green each step."""
+        self.signal_step += 1
+        for node in self.nodes.values():
+            node.signal = "green" if self.signal_step % 2 == 0 else "red"
 
     def heuristic(self, a: Tuple[int, int], b: Tuple[int, int]) -> float:
         """Manhattan distance heuristic used for A* search."""
@@ -104,9 +112,12 @@ class Vehicle:
     path: List[Tuple[int, int]] = field(default_factory=list)
     position_index: int = 0
 
-    def move(self) -> Optional[Tuple[int, int]]:
-        """Move the vehicle along its path by one step."""
+    def move(self, town: Town) -> Optional[Tuple[int, int]]:
+        """Move the vehicle along its path by one step respecting signals."""
         if self.position_index < len(self.path) - 1:
+            next_pos = self.path[self.position_index + 1]
+            if town.nodes[next_pos].signal == "red":
+                return self.path[self.position_index]
             self.position_index += 1
             return self.path[self.position_index]
         return None
@@ -124,8 +135,9 @@ class TrafficSimulator:
         self.vehicles.append(vehicle)
 
     def step(self) -> None:
+        self.town.update_signals()
         for vehicle in self.vehicles:
-            vehicle.move()
+            vehicle.move(self.town)
 
     def is_complete(self) -> bool:
         return all(v.position_index >= len(v.path) - 1 for v in self.vehicles)
