@@ -7,7 +7,15 @@ from town import Town, TrafficSimulator, Vehicle
 
 def render_town(town: Town, vehicles: List[Vehicle]) -> None:
     """Render an ASCII representation of the town with vehicles and signals."""
-    grid = [["G" if town.nodes[(x, y)].signal == "green" else "R" for x in range(town.width)] for y in range(town.height)]
+    def color(x: int, y: int) -> str:
+        sig = town.nodes[(x, y)].signal
+        return {
+            "green": "G",
+            "yellow": "Y",
+            "red": "R",
+        }[sig]
+
+    grid = [[color(x, y) for x in range(town.width)] for y in range(town.height)]
     for idx, vehicle in enumerate(vehicles, start=1):
         if vehicle.path:
             x, y = vehicle.path[vehicle.position_index]
@@ -20,23 +28,29 @@ def render_town(town: Town, vehicles: List[Vehicle]) -> None:
 
 
 def main() -> None:
-    # Create a 5x5 town grid
-    town = Town(width=5, height=5)
-
-    # Adjust a few road weights to simulate traffic
-    town.set_road_weight((1, 2), (2, 2), 5.0)  # heavier traffic on this road
-    town.set_road_weight((2, 2), (2, 3), 3.0)
+    # Create a larger town with random roads and signal phases
+    town = Town(
+        width=7,
+        height=7,
+        randomize_signals=True,
+        random_roads=True,
+    )
 
     simulator = TrafficSimulator(town)
 
-    # Add vehicles
-    vehicle1 = Vehicle(start=(0, 0), goal=(4, 4))
-    vehicle2 = Vehicle(start=(4, 0), goal=(0, 4))
-    simulator.add_vehicle(vehicle1)
-    simulator.add_vehicle(vehicle2)
+    # Add a few vehicles
+    starts_goals = [
+        ((0, 0), (6, 6)),
+        ((6, 0), (0, 6)),
+        ((3, 6), (6, 3)),
+        ((0, 3), (6, 0)),
+    ]
+    for s, g in starts_goals:
+        simulator.add_vehicle(Vehicle(start=s, goal=g))
 
     step = 0
-    while not simulator.is_complete():
+    MAX_STEPS = 15
+    while step < MAX_STEPS and not simulator.is_complete():
         print(f"Step {step}:")
         render_town(town, simulator.vehicles)
         for v in simulator.vehicles:
@@ -44,7 +58,7 @@ def main() -> None:
         simulator.step()
         step += 1
 
-    print("Simulation complete.")
+    print("Demo complete.")
 
 
 if __name__ == "__main__":

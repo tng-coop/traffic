@@ -71,7 +71,8 @@ class VisualTrafficSimulator(TrafficSimulator):
     def step(self) -> None:
         super().step()
         for (x, y), item in self.signal_items.items():
-            color = "green" if self.town.nodes[(x, y)].signal == "green" else "red"
+            sig = self.town.nodes[(x, y)].signal
+            color = {"green": "green", "yellow": "yellow", "red": "red"}[sig]
             self.canvas.itemconfig(item, fill=color)
         for vehicle, item in zip(self.vehicles, self.vehicle_items):
             x, y = vehicle.path[vehicle.position_index]
@@ -93,32 +94,45 @@ def draw_roads(canvas: tk.Canvas, town: Town) -> Dict[tuple[int, int], int]:
         x, y = pt
         return x * CELL_SIZE + CELL_SIZE / 2, y * CELL_SIZE + CELL_SIZE / 2
 
-    # draw road rectangles with lane markings
+    # draw road segments
     for (x, y), node in town.nodes.items():
         cx, cy = center((x, y))
         for nx, ny in node.neighbors:
-            if nx < x or ny < y:
+            if (nx, ny) < (x, y):
                 continue  # avoid drawing the same road twice
             ncx, ncy = center((nx, ny))
-            if x == nx:
-                x1 = cx - ROAD_WIDTH / 2
-                x2 = cx + ROAD_WIDTH / 2
-                y1, y2 = sorted([cy, ncy])
-                canvas.create_rectangle(x1, y1, x2, y2, fill="gray", outline="")
-                canvas.create_line(cx, y1, cx, y2, fill="white", dash=(4, 4))
+            if x == nx or y == ny:
+                # horizontal or vertical road with lane markings
+                if x == nx:
+                    x1 = cx - ROAD_WIDTH / 2
+                    x2 = cx + ROAD_WIDTH / 2
+                    y1, y2 = sorted([cy, ncy])
+                    canvas.create_rectangle(x1, y1, x2, y2, fill="gray", outline="")
+                    canvas.create_line(cx, y1, cx, y2, fill="white", dash=(4, 4))
+                else:
+                    y1 = cy - ROAD_WIDTH / 2
+                    y2 = cy + ROAD_WIDTH / 2
+                    x1, x2 = sorted([cx, ncx])
+                    canvas.create_rectangle(x1, y1, x2, y2, fill="gray", outline="")
+                    canvas.create_line(x1, cy, x2, cy, fill="white", dash=(4, 4))
             else:
-                y1 = cy - ROAD_WIDTH / 2
-                y2 = cy + ROAD_WIDTH / 2
-                x1, x2 = sorted([cx, ncx])
-                canvas.create_rectangle(x1, y1, x2, y2, fill="gray", outline="")
-                canvas.create_line(x1, cy, x2, cy, fill="white", dash=(4, 4))
+                # diagonal road drawn as a simple thick line
+                canvas.create_line(
+                    cx,
+                    cy,
+                    ncx,
+                    ncy,
+                    fill="gray",
+                    width=ROAD_WIDTH,
+                )
 
     signal_items: Dict[tuple[int, int], int] = {}
     for (x, y) in town.nodes:
         cx, cy = center((x, y))
         r = ROAD_WIDTH / 2
         canvas.create_oval(cx - r, cy - r, cx + r, cy + r, fill="black")
-        color = "green" if town.nodes[(x, y)].signal == "green" else "red"
+        sig = town.nodes[(x, y)].signal
+        color = {"green": "green", "yellow": "yellow", "red": "red"}[sig]
         signal_items[(x, y)] = canvas.create_oval(
             cx - r / 2,
             cy - r / 2,
@@ -131,16 +145,13 @@ def draw_roads(canvas: tk.Canvas, town: Town) -> Dict[tuple[int, int], int]:
 
 
 def main() -> None:
-    # Create a larger grid to resemble a small town
-    town = Town(width=10, height=10)
-
-    # Randomly adjust a few road weights to simulate traffic
-    for _ in range(15):
-        a = (random.randint(0, town.width - 1), random.randint(0, town.height - 1))
-        neighbors = list(town.nodes[a].neighbors.keys())
-        if neighbors:
-            b = random.choice(neighbors)
-            town.set_road_weight(a, b, random.uniform(2.0, 6.0))
+    # Create a town with random roads and signal offsets
+    town = Town(
+        width=10,
+        height=10,
+        randomize_signals=True,
+        random_roads=True,
+    )
 
     root = tk.Tk()
     root.title("Traffic Simulator")

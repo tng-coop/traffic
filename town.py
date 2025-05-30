@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from heapq import heappop, heappush
+import random
 from typing import Dict, List, Optional, Tuple
 
 
@@ -23,19 +24,37 @@ class Node:
     y: int
     neighbors: Dict[Tuple[int, int], float] = field(default_factory=dict)
     signal: str = "green"
+    signal_offset: int = 0
 
 
 class Town:
     """Grid-based town with roads connecting intersections."""
 
-    def __init__(self, width: int, height: int, signal_duration: int = 2) -> None:
+    def __init__(
+        self,
+        width: int,
+        height: int,
+        signal_duration: int = 2,
+        yellow_duration: int = 1,
+        randomize_signals: bool = False,
+        random_roads: bool = False,
+    ) -> None:
         self.width = width
         self.height = height
         self.nodes: Dict[Tuple[int, int], Node] = {}
-        self._create_grid()
-        self.signal_duration = signal_duration
-        # Start at 1 so the first call to update_signals sets all lights to red
-        self.signal_step = 1
+        self._create_grid() if not random_roads else self._create_random_roads()
+        self.green_duration = signal_duration
+        self.yellow_duration = yellow_duration
+        self.red_duration = signal_duration
+        self.randomize_signals = randomize_signals
+        cycle = self.green_duration + self.yellow_duration + self.red_duration
+        # Start so first update puts signals in red phase
+        self.signal_step = self.green_duration + self.yellow_duration - 1
+        for node in self.nodes.values():
+            if randomize_signals:
+                node.signal_offset = random.randint(0, cycle - 1)
+            phase = (self.signal_step + node.signal_offset) % cycle
+            node.signal = self._phase_to_color(phase)
 
     def _create_grid(self) -> None:
         for x in range(self.width):
@@ -51,20 +70,43 @@ class Town:
                     if 0 <= nx < self.width and 0 <= ny < self.height:
                         node.neighbors[(nx, ny)] = 1.0
 
+    def _create_random_roads(self) -> None:
+        """Create random road connections with varying lengths."""
+        for x in range(self.width):
+            for y in range(self.height):
+                self.nodes[(x, y)] = Node(x, y)
+
+        coords = list(self.nodes.keys())
+        for a in coords:
+            # each node connects to a few random other nodes
+            choices = random.sample(coords, random.randint(2, 4))
+            for b in choices:
+                if a == b:
+                    continue
+                dist = ((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2) ** 0.5
+                self.nodes[a].neighbors[b] = dist
+                self.nodes[b].neighbors[a] = dist
+
     def set_road_weight(self, a: Tuple[int, int], b: Tuple[int, int], weight: float) -> None:
         """Set weight for the road between two intersections."""
         if b in self.nodes[a].neighbors:
             self.nodes[a].neighbors[b] = weight
             self.nodes[b].neighbors[a] = weight
 
+    def _phase_to_color(self, phase: int) -> str:
+        if phase < self.green_duration:
+            return "green"
+        if phase < self.green_duration + self.yellow_duration:
+            return "yellow"
+        return "red"
+
     def update_signals(self) -> None:
-        """Update traffic signals using a fixed cycle of green and red phases."""
+        """Update traffic signals using a green/yellow/red cycle."""
         self.signal_step += 1
-        cycle_length = self.signal_duration * 2
-        phase = self.signal_step % cycle_length
-        color = "green" if phase < self.signal_duration else "red"
+        cycle = self.green_duration + self.yellow_duration + self.red_duration
         for node in self.nodes.values():
-            node.signal = color
+            phase = (self.signal_step + node.signal_offset) % cycle
+            node.signal = self._phase_to_color(phase)
 
     def heuristic(self, a: Tuple[int, int], b: Tuple[int, int]) -> float:
         """Manhattan distance heuristic used for A* search."""
@@ -121,7 +163,7 @@ class Vehicle:
         """Move the vehicle along its path by one step respecting signals."""
         if self.position_index < len(self.path) - 1:
             next_pos = self.path[self.position_index + 1]
-            if town.nodes[next_pos].signal == "red":
+            if town.nodes[next_pos].signal in ("red", "yellow"):
                 return self.path[self.position_index]
             self.position_index += 1
             return self.path[self.position_index]
